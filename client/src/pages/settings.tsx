@@ -278,12 +278,12 @@ export default function Settings() {
                 model: editingEquipment.model || "",
                 capacity: editingEquipment.capacity || "",
                 voltage: editingEquipment.voltage || "",
-                installationDate: editingEquipment.installationDate ? 
+                installationDate: (editingEquipment.installationDate ? 
                   (editingEquipment.installationDate instanceof Date ? editingEquipment.installationDate.toISOString().split('T')[0] : String(editingEquipment.installationDate).split('T')[0]) : 
-                  undefined,
-                lastMaintenance: editingEquipment.lastMaintenance ? 
+                  undefined) as any,
+                lastMaintenance: (editingEquipment.lastMaintenance ? 
                   (editingEquipment.lastMaintenance instanceof Date ? editingEquipment.lastMaintenance.toISOString().split('T')[0] : String(editingEquipment.lastMaintenance).split('T')[0]) : 
-                  undefined,
+                  undefined) as any,
                 typeSpecificData: editingEquipment.typeSpecificData || undefined,
               }}
               onSubmit={(data) => updateMutation.mutate({ id: editingEquipment.id, data })}
