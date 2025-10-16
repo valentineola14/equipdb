@@ -31,9 +31,12 @@ Preferred communication style: Simple, everyday language.
 **Key Features:**
 - Advanced search with multiple strategies: all fields, equipment ID, address, GPS coordinates with radius
 - Interactive map using React Leaflet with custom status-based markers
-- Sortable, filterable data tables for equipment listing
+- Sortable, filterable data tables with date range filtering (installation date, last maintenance)
+- Type-specific equipment fields (different fields for Transformer, Substation, Generator, Circuit Breaker)
 - Side panel for detailed equipment inspection
 - Responsive sidebar navigation with collapsible mobile view
+- Authenticated Settings page for CRUD operations (username: bahamas, password: equipment@2025)
+- CSV/Excel bulk import with validation and error reporting
 
 ### Backend Architecture
 
@@ -51,20 +54,29 @@ Preferred communication style: Simple, everyday language.
 - Error handling middleware with standardized error responses
 
 **Data Storage Strategy:**
-- Currently using in-memory storage (`MemStorage` class) with sample seed data
-- Interface-based storage abstraction (`IStorage`) allows easy migration to persistent database
-- Drizzle ORM configured for PostgreSQL with schema defined and ready for migration
-- Schema includes comprehensive equipment fields: location data (lat/lng), technical specs (manufacturer, model, capacity, voltage), maintenance tracking
+- PostgreSQL database (Neon serverless) for persistent data storage
+- Drizzle ORM for type-safe database operations
+- Database schema includes:
+  - Core equipment fields: UUID ID, equipment ID, name, type, status
+  - Location data: address, latitude (decimal), longitude (decimal)
+  - Technical specs: manufacturer, model, capacity, voltage
+  - Temporal data: installation date, last maintenance (timestamps)
+  - Type-specific data: JSONB column for equipment-type-specific fields
 
 ### Data Model
 
 **Equipment Schema:**
 - Core identifiers: UUID primary key, unique equipment ID (e.g., "TRF-001-NYC")
-- Categorization: type (Transformer, Substation, Generator, etc.), status (operational, maintenance, offline)
+- Categorization: type (Transformer, Substation, Generator, Circuit Breaker, Capacitor Bank, Voltage Regulator), status (operational, maintenance, offline)
 - Location data: human-readable address, decimal latitude/longitude for mapping
 - Technical specifications: manufacturer, model, capacity, voltage
 - Temporal data: installation date, last maintenance date
-- All fields except optional technical specs are required
+- Type-specific fields stored in JSONB:
+  - Transformer: power rating, cooling type, tap changer type, insulation type
+  - Substation: voltage level, number of bays, GIS/AIS type, control system
+  - Generator: fuel type, rated power, efficiency, start type, coolant type
+  - Circuit Breaker: breaking capacity, interrupting medium, number of poles, operating mechanism
+  - Other types: capacity bank (rated kVAR, voltage rating), voltage regulator (regulation range, control mode)
 
 ### External Dependencies
 
@@ -93,5 +105,7 @@ Preferred communication style: Simple, everyday language.
 - Replit-specific plugins for development banner, error overlay, and cartographer
 
 **Authentication:**
-- No authentication system currently implemented
-- Session management dependencies present (connect-pg-simple) but not active
+- Client-side authentication for Settings page
+- Hardcoded credentials for internal use: username "bahamas", password "equipment@2025"
+- Auth context provider manages authentication state
+- Protected routes redirect to login when not authenticated

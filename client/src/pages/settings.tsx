@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { LoginForm } from "@/components/login-form";
 import { EquipmentForm } from "@/components/equipment-form";
+import { BulkImport } from "@/components/bulk-import";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -32,7 +33,7 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Plus, Pencil, Trash2, LogOut } from "lucide-react";
+import { Plus, Pencil, Trash2, LogOut, Upload } from "lucide-react";
 import type { Equipment, InsertEquipment } from "@shared/schema";
 
 export default function Settings() {
@@ -41,6 +42,7 @@ export default function Settings() {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [bulkImportOpen, setBulkImportOpen] = useState(false);
   const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null);
   const [deletingEquipment, setDeletingEquipment] = useState<Equipment | null>(null);
 
@@ -136,6 +138,14 @@ export default function Settings() {
           </p>
         </div>
         <div className="flex gap-3">
+          <Button
+            variant="outline"
+            onClick={() => setBulkImportOpen(true)}
+            data-testid="button-bulk-import"
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Bulk Import
+          </Button>
           <Button
             onClick={() => setAddDialogOpen(true)}
             data-testid="button-add-equipment"
@@ -305,6 +315,9 @@ export default function Settings() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Bulk Import Dialog */}
+      <BulkImport open={bulkImportOpen} onOpenChange={setBulkImportOpen} />
     </div>
   );
 }
