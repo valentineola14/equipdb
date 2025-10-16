@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Upload, Download, AlertCircle, CheckCircle2, X } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import type { EquipmentType } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -42,6 +44,12 @@ export function BulkImport({ open, onOpenChange }: BulkImportProps) {
   const [importing, setImporting] = useState(false);
   const [importResults, setImportResults] = useState<{ success: number; failed: number } | null>(null);
 
+  const { data: equipmentTypesData = [] } = useQuery<EquipmentType[]>({
+    queryKey: ["/api/equipment-types"],
+  });
+
+  const validTypes = equipmentTypesData.map(t => t.name);
+
   const validateRow = (row: any, rowIndex: number): ParsedRow => {
     const errors: string[] = [];
     const data: Partial<InsertEquipment> = {};
@@ -59,7 +67,6 @@ export function BulkImport({ open, onOpenChange }: BulkImportProps) {
       data.name = row.name.trim();
     }
 
-    const validTypes = ["Transformer", "Substation", "Generator", "Circuit Breaker", "Capacitor Bank", "Voltage Regulator"];
     if (!row.type || !validTypes.includes(row.type)) {
       errors.push(`type must be one of: ${validTypes.join(", ")}`);
     } else {

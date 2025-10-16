@@ -11,6 +11,8 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Separator } from "@/components/ui/separator";
+import { useQuery } from "@tanstack/react-query";
+import type { EquipmentType } from "@shared/schema";
 
 export interface FilterOptions {
   types: string[];
@@ -25,15 +27,6 @@ interface EquipmentFiltersProps {
   onFilterChange: (filters: FilterOptions) => void;
 }
 
-const equipmentTypes = [
-  "Transformer",
-  "Substation",
-  "Generator",
-  "Circuit Breaker",
-  "Capacitor Bank",
-  "Voltage Regulator",
-];
-
 const statusOptions = [
   { value: "all", label: "All Status" },
   { value: "operational", label: "Operational" },
@@ -42,6 +35,12 @@ const statusOptions = [
 ];
 
 export function EquipmentFilters({ onFilterChange }: EquipmentFiltersProps) {
+  const { data: equipmentTypesData = [] } = useQuery<EquipmentType[]>({
+    queryKey: ["/api/equipment-types"],
+  });
+
+  const equipmentTypes = equipmentTypesData.map(t => t.name);
+
   const [isOpen, setIsOpen] = useState(true);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [selectedStatus, setSelectedStatus] = useState("all");
