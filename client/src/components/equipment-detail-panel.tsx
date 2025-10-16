@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 
 interface EquipmentDetailPanelProps {
   equipment: Equipment | null;
@@ -27,12 +28,29 @@ export function EquipmentDetailPanel({
     queryKey: ["/api/equipment-types"],
   });
 
-  if (!equipment) return null;
+  // Fetch fresh equipment data when panel is open
+  const { data: freshEquipment, refetch } = useQuery<Equipment>({
+    queryKey: ["/api/equipment", equipment?.id],
+    enabled: open && !!equipment?.id,
+    staleTime: 0, // Always consider data stale
+  });
 
-  const equipmentType = equipmentTypes?.find((t) => t.name === equipment.type);
+  // Refetch when panel opens
+  useEffect(() => {
+    if (open && equipment?.id) {
+      refetch();
+    }
+  }, [open, equipment?.id, refetch]);
+
+  // Use fresh data if available, fallback to prop
+  const displayEquipment = freshEquipment || equipment;
+
+  if (!displayEquipment) return null;
+
+  const equipmentType = equipmentTypes?.find((t) => t.name === displayEquipment.type);
   const fieldConfigs: FieldConfig[] = equipmentType?.fieldsConfig ?? [];
   const sortedFields = [...fieldConfigs].sort((a, b) => a.order - b.order);
-  const typeSpecificData: Record<string, any> = (equipment.typeSpecificData as Record<string, any>) || {};
+  const typeSpecificData: Record<string, any> = (displayEquipment.typeSpecificData as Record<string, any>) || {};
 
   return (
     <Sheet open={open} onOpenChange={onClose}>
@@ -41,13 +59,13 @@ export function EquipmentDetailPanel({
           <div className="flex items-start justify-between">
             <div className="space-y-1">
               <SheetTitle className="text-xl font-semibold">
-                {equipment.name}
+                {displayEquipment.name}
               </SheetTitle>
               <p className="font-mono text-sm text-muted-foreground" data-testid="text-equipment-id">
-                {equipment.equipmentId}
+                {displayEquipment.equipmentId}
               </p>
             </div>
-            <EquipmentStatusBadge status={equipment.status} showIcon />
+            <EquipmentStatusBadge status={displayEquipment.status} showIcon />
           </div>
         </SheetHeader>
 
@@ -72,19 +90,19 @@ export function EquipmentDetailPanel({
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Type</span>
                     <span className="font-medium" data-testid="text-equipment-type">
-                      {equipment.type}
+                      {displayEquipment.type}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Status</span>
                     <span className="font-medium capitalize" data-testid="text-equipment-status">
-                      {equipment.status}
+                      {displayEquipment.status}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Location</span>
                     <span className="font-medium" data-testid="text-equipment-location">
-                      {equipment.location}
+                      {displayEquipment.location}
                     </span>
                   </div>
                 </div>
@@ -103,7 +121,7 @@ export function EquipmentDetailPanel({
                       Address
                     </span>
                     <span className="font-medium" data-testid="text-equipment-address">
-                      {equipment.address}
+                      {displayEquipment.address}
                     </span>
                   </div>
                   <div>
@@ -111,8 +129,8 @@ export function EquipmentDetailPanel({
                       Coordinates
                     </span>
                     <span className="font-mono text-xs" data-testid="text-equipment-coordinates">
-                      {Number(equipment.latitude).toFixed(6)},{" "}
-                      {Number(equipment.longitude).toFixed(6)}
+                      {Number(displayEquipment.latitude).toFixed(6)},{" "}
+                      {Number(displayEquipment.longitude).toFixed(6)}
                     </span>
                   </div>
                 </div>
@@ -129,16 +147,16 @@ export function EquipmentDetailPanel({
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Installation Date</span>
                     <span className="font-medium" data-testid="text-installation-date">
-                      {equipment.installationDate
-                        ? new Date(equipment.installationDate).toLocaleDateString()
+                      {displayEquipment.installationDate
+                        ? new Date(displayEquipment.installationDate).toLocaleDateString()
                         : "N/A"}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Last Maintenance</span>
                     <span className="font-medium" data-testid="text-last-maintenance">
-                      {equipment.lastMaintenance
-                        ? new Date(equipment.lastMaintenance).toLocaleDateString()
+                      {displayEquipment.lastMaintenance
+                        ? new Date(displayEquipment.lastMaintenance).toLocaleDateString()
                         : "N/A"}
                     </span>
                   </div>
@@ -158,25 +176,25 @@ export function EquipmentDetailPanel({
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Manufacturer</span>
                     <span className="font-medium" data-testid="text-manufacturer">
-                      {equipment.manufacturer || "N/A"}
+                      {displayEquipment.manufacturer || "N/A"}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Model</span>
                     <span className="font-medium" data-testid="text-model">
-                      {equipment.model || "N/A"}
+                      {displayEquipment.model || "N/A"}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Capacity</span>
                     <span className="font-medium" data-testid="text-capacity">
-                      {equipment.capacity || "N/A"}
+                      {displayEquipment.capacity || "N/A"}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Voltage</span>
                     <span className="font-medium" data-testid="text-voltage">
-                      {equipment.voltage || "N/A"}
+                      {displayEquipment.voltage || "N/A"}
                     </span>
                   </div>
                 </div>
@@ -188,7 +206,7 @@ export function EquipmentDetailPanel({
 
                   <div>
                     <h3 className="text-sm font-medium mb-3">
-                      {equipment.type}-Specific Details
+                      {displayEquipment.type}-Specific Details
                     </h3>
                     <div className="space-y-3 text-sm">
                       {sortedFields.map((fieldConfig) => {
