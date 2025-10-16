@@ -1,4 +1,4 @@
-import { type Equipment } from "@shared/schema";
+import { type Equipment, type EquipmentTypeWithFields, type FieldConfig } from "@shared/schema";
 import { X, MapPin, Calendar, Wrench, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -10,6 +10,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useQuery } from "@tanstack/react-query";
 
 interface EquipmentDetailPanelProps {
   equipment: Equipment | null;
@@ -22,7 +23,16 @@ export function EquipmentDetailPanel({
   open,
   onClose,
 }: EquipmentDetailPanelProps) {
+  const { data: equipmentTypes } = useQuery<EquipmentTypeWithFields[]>({
+    queryKey: ["/api/equipment-types"],
+  });
+
   if (!equipment) return null;
+
+  const equipmentType = equipmentTypes?.find((t) => t.name === equipment.type);
+  const fieldConfigs: FieldConfig[] = equipmentType?.fieldsConfig ?? [];
+  const sortedFields = [...fieldConfigs].sort((a, b) => a.order - b.order);
+  const typeSpecificData: Record<string, any> = (equipment.typeSpecificData as Record<string, any>) || {};
 
   return (
     <Sheet open={open} onOpenChange={onClose}>
@@ -171,6 +181,52 @@ export function EquipmentDetailPanel({
                   </div>
                 </div>
               </div>
+
+              {sortedFields.length > 0 && (
+                <>
+                  <Separator />
+
+                  <div>
+                    <h3 className="text-sm font-medium mb-3">
+                      {equipment.type}-Specific Details
+                    </h3>
+                    <div className="space-y-3 text-sm">
+                      {sortedFields.map((fieldConfig) => {
+                        const value = typeSpecificData[fieldConfig.dataKey];
+                        let displayValue = "N/A";
+
+                        // Format display based on input type
+                        if (value !== null && value !== undefined && value !== "") {
+                          if (fieldConfig.inputType === "boolean") {
+                            displayValue = (value === "true" || value === true) ? "Yes" : "No";
+                          } else if (fieldConfig.inputType === "multiselect") {
+                            displayValue = value.split(",").filter(Boolean).join(", ");
+                          } else if (fieldConfig.inputType === "date") {
+                            displayValue = new Date(value).toLocaleDateString();
+                          } else {
+                            displayValue = String(value);
+                          }
+                        } else if (fieldConfig.inputType === "boolean" && value === "") {
+                          // Handle empty string for boolean (should show N/A, not "No")
+                          displayValue = "N/A";
+                        }
+
+                        return (
+                          <div key={fieldConfig.id} className="flex justify-between">
+                            <span className="text-muted-foreground">
+                              {fieldConfig.label}
+                              {fieldConfig.isRequired && " *"}
+                            </span>
+                            <span className="font-medium" data-testid={`text-${fieldConfig.dataKey}`}>
+                              {displayValue}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
 
               <Separator />
 
