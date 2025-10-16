@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertEquipmentSchema, searchEquipmentSchema } from "@shared/schema";
+import { insertEquipmentSchema, searchEquipmentSchema, insertEquipmentTypesSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Search equipment - MUST be before /:id route
@@ -124,6 +124,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting equipment:", error);
       res.status(500).json({ error: "Failed to delete equipment" });
+    }
+  });
+
+  // Equipment Types Routes
+  
+  // Get all equipment types
+  app.get("/api/equipment-types", async (_req, res) => {
+    try {
+      const types = await storage.getAllEquipmentTypes();
+      res.json(types);
+    } catch (error) {
+      console.error("Error fetching equipment types:", error);
+      res.status(500).json({ error: "Failed to fetch equipment types" });
+    }
+  });
+
+  // Get equipment type by ID
+  app.get("/api/equipment-types/:id", async (req, res) => {
+    try {
+      const type = await storage.getEquipmentTypeById(req.params.id);
+      if (!type) {
+        return res.status(404).json({ error: "Equipment type not found" });
+      }
+      res.json(type);
+    } catch (error) {
+      console.error("Error fetching equipment type:", error);
+      res.status(500).json({ error: "Failed to fetch equipment type" });
+    }
+  });
+
+  // Create equipment type
+  app.post("/api/equipment-types", async (req, res) => {
+    try {
+      const validatedData = insertEquipmentTypesSchema.parse(req.body);
+      const type = await storage.createEquipmentType(validatedData);
+      res.status(201).json(type);
+    } catch (error) {
+      console.error("Error creating equipment type:", error);
+      if (error instanceof Error && error.name === "ZodError") {
+        return res.status(400).json({ error: "Invalid equipment type data", details: error });
+      }
+      res.status(500).json({ error: "Failed to create equipment type" });
+    }
+  });
+
+  // Update equipment type
+  app.patch("/api/equipment-types/:id", async (req, res) => {
+    try {
+      const validatedUpdates = insertEquipmentTypesSchema.partial().parse(req.body);
+      const type = await storage.updateEquipmentType(req.params.id, validatedUpdates);
+      if (!type) {
+        return res.status(404).json({ error: "Equipment type not found" });
+      }
+      res.json(type);
+    } catch (error) {
+      console.error("Error updating equipment type:", error);
+      if (error instanceof Error && error.name === "ZodError") {
+        return res.status(400).json({ error: "Invalid equipment type data", details: error });
+      }
+      res.status(500).json({ error: "Failed to update equipment type" });
+    }
+  });
+
+  // Delete equipment type
+  app.delete("/api/equipment-types/:id", async (req, res) => {
+    try {
+      const success = await storage.deleteEquipmentType(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "Equipment type not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting equipment type:", error);
+      res.status(500).json({ error: "Failed to delete equipment type" });
     }
   });
 
