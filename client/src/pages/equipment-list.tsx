@@ -40,6 +40,8 @@ export default function EquipmentList() {
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
   const [detailPanelOpen, setDetailPanelOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null);
 
   // Build the appropriate query key and URL
   let queryKey: (string | number)[];
@@ -131,6 +133,35 @@ export default function EquipmentList() {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<InsertEquipment> }) => {
+      const res = await apiRequest("PATCH", `/api/equipment/${id}`, data);
+      return await res.json();
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/equipment"] });
+      await queryClient.refetchQueries({ queryKey: ["/api/equipment"] });
+      setEditDialogOpen(false);
+      setEditingEquipment(null);
+      toast({
+        title: "Equipment updated",
+        description: "Equipment has been successfully updated.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update equipment",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleEdit = (equipment: Equipment) => {
+    setEditingEquipment(equipment);
+    setEditDialogOpen(true);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -177,6 +208,7 @@ export default function EquipmentList() {
             isLoading={isLoading}
             onViewDetails={handleViewDetails}
             onViewOnMap={handleViewOnMap}
+            onEdit={handleEdit}
           />
         </div>
       </div>
@@ -200,6 +232,44 @@ export default function EquipmentList() {
               key="create-equipment-form"
               onSubmit={(data) => createMutation.mutate(data)}
               isPending={createMutation.isPending}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle data-testid="dialog-title-edit-equipment">Edit Equipment</DialogTitle>
+            <DialogDescription>
+              Update the equipment details below.
+            </DialogDescription>
+          </DialogHeader>
+          {editDialogOpen && editingEquipment && (
+            <EquipmentForm
+              key={`edit-equipment-form-${editingEquipment.id}`}
+              defaultValues={{
+                equipmentId: editingEquipment.equipmentId,
+                name: editingEquipment.name,
+                type: editingEquipment.type,
+                status: editingEquipment.status,
+                location: editingEquipment.location,
+                address: editingEquipment.address,
+                latitude: editingEquipment.latitude,
+                longitude: editingEquipment.longitude,
+                manufacturer: editingEquipment.manufacturer || "",
+                model: editingEquipment.model || "",
+                capacity: editingEquipment.capacity || "",
+                voltage: editingEquipment.voltage || "",
+                installationDate: editingEquipment.installationDate ? 
+                  (typeof editingEquipment.installationDate === 'string' ? editingEquipment.installationDate.split('T')[0] : new Date(editingEquipment.installationDate).toISOString().split('T')[0]) : 
+                  undefined,
+                lastMaintenance: editingEquipment.lastMaintenance ? 
+                  (typeof editingEquipment.lastMaintenance === 'string' ? editingEquipment.lastMaintenance.split('T')[0] : new Date(editingEquipment.lastMaintenance).toISOString().split('T')[0]) : 
+                  undefined,
+              }}
+              onSubmit={(data) => updateMutation.mutate({ id: editingEquipment.id, data })}
+              isPending={updateMutation.isPending}
             />
           )}
         </DialogContent>

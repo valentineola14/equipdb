@@ -42,10 +42,12 @@ const statusOptions = [
   { value: "offline", label: "Offline" },
 ];
 
-// Enhanced validation to ensure lat/lon are valid decimal strings
+// Enhanced validation to ensure lat/lon are valid decimal strings and dates accept string inputs
 const formSchema = insertEquipmentSchema.extend({
   latitude: z.string().regex(/^-?\d+\.?\d*$/, "Must be a valid number"),
   longitude: z.string().regex(/^-?\d+\.?\d*$/, "Must be a valid number"),
+  installationDate: z.union([z.date(), z.string(), z.undefined()]).optional(),
+  lastMaintenance: z.union([z.date(), z.string(), z.undefined()]).optional(),
 });
 
 export function EquipmentForm({ defaultValues, onSubmit, isPending }: EquipmentFormProps) {
@@ -316,8 +318,8 @@ export function EquipmentForm({ defaultValues, onSubmit, isPending }: EquipmentF
                 <FormControl>
                   <Input
                     type="date"
-                    value={field.value ? new Date(field.value).toISOString().split('T')[0] : ""}
-                    onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : undefined)}
+                    value={field.value ? (typeof field.value === 'string' ? field.value : new Date(field.value).toISOString().split('T')[0]) : ""}
+                    onChange={(e) => field.onChange(e.target.value || undefined)}
                     data-testid="input-installation-date"
                   />
                 </FormControl>
@@ -335,8 +337,8 @@ export function EquipmentForm({ defaultValues, onSubmit, isPending }: EquipmentF
                 <FormControl>
                   <Input
                     type="date"
-                    value={field.value ? new Date(field.value).toISOString().split('T')[0] : ""}
-                    onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : undefined)}
+                    value={field.value ? (typeof field.value === 'string' ? field.value : new Date(field.value).toISOString().split('T')[0]) : ""}
+                    onChange={(e) => field.onChange(e.target.value || undefined)}
                     data-testid="input-last-maintenance"
                   />
                 </FormControl>

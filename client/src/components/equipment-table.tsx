@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { type Equipment } from "@shared/schema";
-import { ArrowUpDown, Eye, MapPin } from "lucide-react";
+import { ArrowUpDown, Eye, MapPin, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -18,6 +18,7 @@ interface EquipmentTableProps {
   isLoading?: boolean;
   onViewDetails: (equipment: Equipment) => void;
   onViewOnMap: (equipment: Equipment) => void;
+  onEdit?: (equipment: Equipment) => void;
 }
 
 type SortField = "equipmentId" | "name" | "type" | "status" | "lastMaintenance";
@@ -28,6 +29,7 @@ export function EquipmentTable({
   isLoading,
   onViewDetails,
   onViewOnMap,
+  onEdit,
 }: EquipmentTableProps) {
   const [sortField, setSortField] = useState<SortField>("equipmentId");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
@@ -174,6 +176,18 @@ export function EquipmentTable({
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-1">
+                  {onEdit && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => onEdit(item)}
+                      data-testid={`button-edit-${item.equipmentId}`}
+                      aria-label="Edit equipment"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="icon"

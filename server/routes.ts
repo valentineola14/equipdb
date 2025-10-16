@@ -63,7 +63,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create equipment
   app.post("/api/equipment", async (req, res) => {
     try {
-      const validatedData = insertEquipmentSchema.parse(req.body);
+      // Convert date strings/numbers to Date objects for timestamp fields
+      const bodyWithDates = { ...req.body };
+      if (bodyWithDates.installationDate && typeof bodyWithDates.installationDate !== 'object') {
+        bodyWithDates.installationDate = new Date(bodyWithDates.installationDate);
+      }
+      if (bodyWithDates.lastMaintenance && typeof bodyWithDates.lastMaintenance !== 'object') {
+        bodyWithDates.lastMaintenance = new Date(bodyWithDates.lastMaintenance);
+      }
+      
+      const validatedData = insertEquipmentSchema.parse(bodyWithDates);
       const equipment = await storage.createEquipment(validatedData);
       res.status(201).json(equipment);
     } catch (error) {
@@ -78,13 +87,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update equipment
   app.patch("/api/equipment/:id", async (req, res) => {
     try {
-      const equipment = await storage.updateEquipment(req.params.id, req.body);
+      // Convert date strings/numbers to Date objects for timestamp fields
+      const updates = { ...req.body };
+      if (updates.installationDate && typeof updates.installationDate !== 'object') {
+        updates.installationDate = new Date(updates.installationDate);
+      }
+      if (updates.lastMaintenance && typeof updates.lastMaintenance !== 'object') {
+        updates.lastMaintenance = new Date(updates.lastMaintenance);
+      }
+      
+      // Validate updates with partial schema
+      const validatedUpdates = insertEquipmentSchema.partial().parse(updates);
+      
+      const equipment = await storage.updateEquipment(req.params.id, validatedUpdates);
       if (!equipment) {
         return res.status(404).json({ error: "Equipment not found" });
       }
       res.json(equipment);
     } catch (error) {
       console.error("Error updating equipment:", error);
+      if (error instanceof Error && error.name === "ZodError") {
+        return res.status(400).json({ error: "Invalid equipment data", details: error });
+      }
       res.status(500).json({ error: "Failed to update equipment" });
     }
   });
