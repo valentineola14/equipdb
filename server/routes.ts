@@ -4,32 +4,7 @@ import { storage } from "./storage";
 import { insertEquipmentSchema, searchEquipmentSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Get all equipment
-  app.get("/api/equipment", async (_req, res) => {
-    try {
-      const equipment = await storage.getAllEquipment();
-      res.json(equipment);
-    } catch (error) {
-      console.error("Error fetching equipment:", error);
-      res.status(500).json({ error: "Failed to fetch equipment" });
-    }
-  });
-
-  // Get equipment by ID
-  app.get("/api/equipment/:id", async (req, res) => {
-    try {
-      const equipment = await storage.getEquipmentById(req.params.id);
-      if (!equipment) {
-        return res.status(404).json({ error: "Equipment not found" });
-      }
-      res.json(equipment);
-    } catch (error) {
-      console.error("Error fetching equipment:", error);
-      res.status(500).json({ error: "Failed to fetch equipment" });
-    }
-  });
-
-  // Search equipment
+  // Search equipment - MUST be before /:id route
   app.get("/api/equipment/search", async (req, res) => {
     try {
       const { query, searchType, latitude, longitude, radius } = req.query;
@@ -57,6 +32,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error searching equipment:", error);
       res.status(500).json({ error: "Failed to search equipment" });
+    }
+  });
+
+  // Get all equipment
+  app.get("/api/equipment", async (_req, res) => {
+    try {
+      const equipment = await storage.getAllEquipment();
+      res.json(equipment);
+    } catch (error) {
+      console.error("Error fetching equipment:", error);
+      res.status(500).json({ error: "Failed to fetch equipment" });
+    }
+  });
+
+  // Get equipment by ID - MUST be after /search route
+  app.get("/api/equipment/:id", async (req, res) => {
+    try {
+      const equipment = await storage.getEquipmentById(req.params.id);
+      if (!equipment) {
+        return res.status(404).json({ error: "Equipment not found" });
+      }
+      res.json(equipment);
+    } catch (error) {
+      console.error("Error fetching equipment:", error);
+      res.status(500).json({ error: "Failed to fetch equipment" });
     }
   });
 
