@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { LoginForm } from "@/components/login-form";
-import { EquipmentForm } from "@/components/equipment-form";
-import { BulkImport } from "@/components/bulk-import";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -29,39 +27,58 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Plus, Pencil, Trash2, LogOut, Upload } from "lucide-react";
-import type { Equipment, InsertEquipment } from "@shared/schema";
+import { Plus, Pencil, Trash2, LogOut } from "lucide-react";
+import type { EquipmentType } from "@shared/schema";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
+const equipmentTypeFormSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  description: z.string().optional(),
+});
+
+type EquipmentTypeFormData = z.infer<typeof equipmentTypeFormSchema>;
 
 export default function Settings() {
   const { isAuthenticated, logout } = useAuth();
   const { toast } = useToast();
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [bulkImportOpen, setBulkImportOpen] = useState(false);
-  const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null);
-  const [deletingEquipment, setDeletingEquipment] = useState<Equipment | null>(null);
+  const [addTypeDialogOpen, setAddTypeDialogOpen] = useState(false);
+  const [editTypeDialogOpen, setEditTypeDialogOpen] = useState(false);
+  const [deleteTypeDialogOpen, setDeleteTypeDialogOpen] = useState(false);
+  const [editingType, setEditingType] = useState<EquipmentType | null>(null);
+  const [deletingType, setDeletingType] = useState<EquipmentType | null>(null);
 
-  const { data: equipment = [], isLoading } = useQuery<Equipment[]>({
-    queryKey: ["/api/equipment"],
+  const { data: equipmentTypes = [], isLoading } = useQuery<EquipmentType[]>({
+    queryKey: ["/api/equipment-types"],
     enabled: isAuthenticated,
   });
 
-  const createMutation = useMutation({
-    mutationFn: async (data: InsertEquipment) => {
-      return await apiRequest("POST", "/api/equipment", data);
+  const createTypeMutation = useMutation({
+    mutationFn: async (data: EquipmentTypeFormData) => {
+      return await apiRequest("POST", "/api/equipment-types", data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/equipment"] });
-      setAddDialogOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/equipment-types"] });
+      setAddTypeDialogOpen(false);
       toast({
-        title: "Equipment added",
-        description: "Equipment has been added successfully.",
+        title: "Equipment type added",
+        description: "Equipment type has been added successfully.",
       });
     },
     onError: (error: Error) => {
@@ -73,17 +90,17 @@ export default function Settings() {
     },
   });
 
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<InsertEquipment> }) => {
-      return await apiRequest("PATCH", `/api/equipment/${id}`, data);
+  const updateTypeMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: EquipmentTypeFormData }) => {
+      return await apiRequest("PATCH", `/api/equipment-types/${id}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/equipment"] });
-      setEditDialogOpen(false);
-      setEditingEquipment(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/equipment-types"] });
+      setEditTypeDialogOpen(false);
+      setEditingType(null);
       toast({
-        title: "Equipment updated",
-        description: "Equipment has been updated successfully.",
+        title: "Equipment type updated",
+        description: "Equipment type has been updated successfully.",
       });
     },
     onError: (error: Error) => {
@@ -95,17 +112,17 @@ export default function Settings() {
     },
   });
 
-  const deleteMutation = useMutation({
+  const deleteTypeMutation = useMutation({
     mutationFn: async (id: string) => {
-      return await apiRequest("DELETE", `/api/equipment/${id}`);
+      return await apiRequest("DELETE", `/api/equipment-types/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/equipment"] });
-      setDeleteDialogOpen(false);
-      setDeletingEquipment(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/equipment-types"] });
+      setDeleteTypeDialogOpen(false);
+      setDeletingType(null);
       toast({
-        title: "Equipment deleted",
-        description: "Equipment has been deleted successfully.",
+        title: "Equipment type deleted",
+        description: "Equipment type has been deleted successfully.",
       });
     },
     onError: (error: Error) => {
@@ -115,210 +132,316 @@ export default function Settings() {
         variant: "destructive",
       });
     },
+  });
+
+  const addForm = useForm<EquipmentTypeFormData>({
+    resolver: zodResolver(equipmentTypeFormSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+    },
+  });
+
+  const editForm = useForm<EquipmentTypeFormData>({
+    resolver: zodResolver(equipmentTypeFormSchema),
   });
 
   if (!isAuthenticated) {
     return <LoginForm />;
   }
 
-  const statusColors: Record<string, "default" | "destructive" | "secondary"> = {
-    operational: "default",
-    maintenance: "secondary",
-    offline: "destructive",
-  };
-
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold" data-testid="heading-settings">
-            Equipment Management
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Add, edit, or delete equipment from the system
-          </p>
-        </div>
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
-            onClick={() => setBulkImportOpen(true)}
-            data-testid="button-bulk-import"
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            Bulk Import
-          </Button>
-          <Button
-            onClick={() => setAddDialogOpen(true)}
-            data-testid="button-add-equipment"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Equipment
-          </Button>
+    <div className="h-full overflow-auto">
+      <div className="container mx-auto p-6 max-w-7xl">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold">Settings</h1>
+            <p className="text-muted-foreground">Manage equipment field configurations</p>
+          </div>
           <Button
             variant="outline"
             onClick={logout}
             data-testid="button-logout"
           >
-            <LogOut className="h-4 w-4 mr-2" />
+            <LogOut className="w-4 h-4 mr-2" />
             Logout
           </Button>
         </div>
+
+        <Tabs defaultValue="equipment-types" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="equipment-types" data-testid="tab-equipment-types">
+              Equipment Types
+            </TabsTrigger>
+            <TabsTrigger value="status-options" data-testid="tab-status-options">
+              Status Options
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="equipment-types" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Equipment Types</CardTitle>
+                    <CardDescription>
+                      Manage the types available in equipment dropdown (e.g., Transformer, Generator)
+                    </CardDescription>
+                  </div>
+                  <Button
+                    onClick={() => {
+                      addForm.reset({ name: "", description: "" });
+                      setAddTypeDialogOpen(true);
+                    }}
+                    data-testid="button-add-type"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Type
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <p className="text-muted-foreground">Loading...</p>
+                ) : equipmentTypes.length === 0 ? (
+                  <p className="text-muted-foreground">No equipment types configured</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {equipmentTypes.map((type) => (
+                        <TableRow key={type.id}>
+                          <TableCell className="font-medium" data-testid={`text-type-name-${type.id}`}>
+                            {type.name}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground" data-testid={`text-type-description-${type.id}`}>
+                            {type.description || "-"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  setEditingType(type);
+                                  editForm.reset({
+                                    name: type.name,
+                                    description: type.description || "",
+                                  });
+                                  setEditTypeDialogOpen(true);
+                                }}
+                                data-testid={`button-edit-type-${type.id}`}
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  setDeletingType(type);
+                                  setDeleteTypeDialogOpen(true);
+                                }}
+                                data-testid={`button-delete-type-${type.id}`}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="status-options" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Status Options</CardTitle>
+                <CardDescription>
+                  Manage the status values available in equipment forms (e.g., Operational, Maintenance, Offline)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">Status options management coming soon...</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+
+        {/* Add Equipment Type Dialog */}
+        <Dialog open={addTypeDialogOpen} onOpenChange={setAddTypeDialogOpen}>
+          <DialogContent data-testid="dialog-add-type">
+            <DialogHeader>
+              <DialogTitle>Add Equipment Type</DialogTitle>
+              <DialogDescription>
+                Add a new equipment type to the dropdown options
+              </DialogDescription>
+            </DialogHeader>
+            <Form {...addForm}>
+              <form
+                onSubmit={addForm.handleSubmit((data) => createTypeMutation.mutate(data))}
+                className="space-y-4"
+              >
+                <FormField
+                  control={addForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Name</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="e.g., Transformer"
+                          {...field}
+                          data-testid="input-type-name"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={addForm.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description (Optional)</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Brief description of this equipment type"
+                          {...field}
+                          data-testid="input-type-description"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setAddTypeDialogOpen(false)}
+                    data-testid="button-cancel-add"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={createTypeMutation.isPending}
+                    data-testid="button-submit-add"
+                  >
+                    {createTypeMutation.isPending ? "Adding..." : "Add Type"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Equipment Type Dialog */}
+        <Dialog open={editTypeDialogOpen} onOpenChange={setEditTypeDialogOpen}>
+          <DialogContent data-testid="dialog-edit-type">
+            <DialogHeader>
+              <DialogTitle>Edit Equipment Type</DialogTitle>
+              <DialogDescription>
+                Update the equipment type configuration
+              </DialogDescription>
+            </DialogHeader>
+            {editingType && (
+              <Form {...editForm}>
+                <form
+                  onSubmit={editForm.handleSubmit((data) =>
+                    updateTypeMutation.mutate({ id: editingType.id, data })
+                  )}
+                  className="space-y-4"
+                >
+                  <FormField
+                    control={editForm.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Name</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="e.g., Transformer"
+                            {...field}
+                            data-testid="input-edit-type-name"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={editForm.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description (Optional)</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Brief description of this equipment type"
+                            {...field}
+                            data-testid="input-edit-type-description"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setEditTypeDialogOpen(false)}
+                      data-testid="button-cancel-edit"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={updateTypeMutation.isPending}
+                      data-testid="button-submit-edit"
+                    >
+                      {updateTypeMutation.isPending ? "Saving..." : "Save Changes"}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Equipment Type Dialog */}
+        <AlertDialog open={deleteTypeDialogOpen} onOpenChange={setDeleteTypeDialogOpen}>
+          <AlertDialogContent data-testid="dialog-delete-type">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Equipment Type</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete "{deletingType?.name}"? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => deletingType && deleteTypeMutation.mutate(deletingType.id)}
+                data-testid="button-confirm-delete"
+              >
+                {deleteTypeMutation.isPending ? "Deleting..." : "Delete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
-
-      {isLoading ? (
-        <div className="flex items-center justify-center h-64" data-testid="loading-equipment">
-          <p className="text-sm text-muted-foreground">Loading equipment...</p>
-        </div>
-      ) : (
-        <div className="rounded-md border" data-testid="equipment-table-container">
-          <Table data-testid="equipment-table">
-            <TableHeader>
-              <TableRow>
-                <TableHead>Equipment ID</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody data-testid="equipment-table-body">
-              {equipment.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground" data-testid="empty-state">
-                    No equipment found. Add your first equipment to get started.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                equipment.map((item) => (
-                  <TableRow key={item.id} data-testid={`row-equipment-${item.id}`}>
-                    <TableCell className="font-mono text-sm" data-testid={`text-equipment-id-${item.id}`}>
-                      {item.equipmentId}
-                    </TableCell>
-                    <TableCell data-testid={`text-name-${item.id}`}>{item.name}</TableCell>
-                    <TableCell data-testid={`text-type-${item.id}`}>{item.type}</TableCell>
-                    <TableCell>
-                      <Badge variant={statusColors[item.status]} data-testid={`badge-status-${item.id}`}>
-                        {item.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell data-testid={`text-location-${item.id}`}>{item.location}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setEditingEquipment(item);
-                            setEditDialogOpen(true);
-                          }}
-                          data-testid={`button-edit-${item.id}`}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setDeletingEquipment(item);
-                            setDeleteDialogOpen(true);
-                          }}
-                          data-testid={`button-delete-${item.id}`}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      )}
-
-      {/* Add Equipment Dialog */}
-      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Add Equipment</DialogTitle>
-            <DialogDescription>
-              Fill in the equipment details below to add it to the system.
-            </DialogDescription>
-          </DialogHeader>
-          <EquipmentForm
-            onSubmit={(data) => createMutation.mutate(data)}
-            isPending={createMutation.isPending}
-          />
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Equipment Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Equipment</DialogTitle>
-            <DialogDescription>
-              Update the equipment details below.
-            </DialogDescription>
-          </DialogHeader>
-          {editDialogOpen && editingEquipment && (
-            <EquipmentForm
-              key={`edit-equipment-form-${editingEquipment.id}`}
-              defaultValues={{
-                equipmentId: editingEquipment.equipmentId,
-                name: editingEquipment.name,
-                type: editingEquipment.type,
-                status: editingEquipment.status,
-                location: editingEquipment.location,
-                address: editingEquipment.address,
-                latitude: editingEquipment.latitude,
-                longitude: editingEquipment.longitude,
-                manufacturer: editingEquipment.manufacturer || "",
-                model: editingEquipment.model || "",
-                capacity: editingEquipment.capacity || "",
-                voltage: editingEquipment.voltage || "",
-                installationDate: (editingEquipment.installationDate ? 
-                  (editingEquipment.installationDate instanceof Date ? editingEquipment.installationDate.toISOString().split('T')[0] : String(editingEquipment.installationDate).split('T')[0]) : 
-                  undefined) as any,
-                lastMaintenance: (editingEquipment.lastMaintenance ? 
-                  (editingEquipment.lastMaintenance instanceof Date ? editingEquipment.lastMaintenance.toISOString().split('T')[0] : String(editingEquipment.lastMaintenance).split('T')[0]) : 
-                  undefined) as any,
-                typeSpecificData: editingEquipment.typeSpecificData || undefined,
-              }}
-              onSubmit={(data) => updateMutation.mutate({ id: editingEquipment.id, data })}
-              isPending={updateMutation.isPending}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the equipment{" "}
-              <span className="font-semibold">{deletingEquipment?.equipmentId}</span>.
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deletingEquipment && deleteMutation.mutate(deletingEquipment.id)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              data-testid="button-confirm-delete"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Bulk Import Dialog */}
-      <BulkImport open={bulkImportOpen} onOpenChange={setBulkImportOpen} />
     </div>
   );
 }
