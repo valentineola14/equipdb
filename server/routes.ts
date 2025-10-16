@@ -1,8 +1,41 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertEquipmentSchema, searchEquipmentSchema, insertEquipmentTypesSchema, fieldConfigSchema } from "@shared/schema";
+import { insertEquipmentSchema, searchEquipmentSchema, insertEquipmentTypesSchema, fieldConfigSchema, type FieldConfig } from "@shared/schema";
 import { z } from "zod";
+
+// Validate dynamic fields based on equipment type field configuration
+async function validateDynamicFields(equipmentType: string, typeSpecificData: any): Promise<{ valid: boolean; errors: string[] }> {
+  const errors: string[] = [];
+  
+  try {
+    // Get equipment type configuration
+    const types = await storage.getAllEquipmentTypes();
+    const type = types.find((t) => t.name === equipmentType);
+    
+    if (!type) {
+      errors.push(`Equipment type "${equipmentType}" not found`);
+      return { valid: false, errors };
+    }
+    
+    const fieldConfigs = (type.fieldsConfig as FieldConfig[] | null) ?? [];
+    
+    // Validate required fields
+    for (const field of fieldConfigs) {
+      if (field.isRequired) {
+        const value = typeSpecificData?.[field.dataKey];
+        if (value === null || value === undefined || value === "") {
+          errors.push(`${field.label} is required`);
+        }
+      }
+    }
+    
+    return { valid: errors.length === 0, errors };
+  } catch (error) {
+    console.error("Error validating dynamic fields:", error);
+    return { valid: false, errors: ["Failed to validate dynamic fields"] };
+  }
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Search equipment - MUST be before /:id route
@@ -74,6 +107,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const validatedData = insertEquipmentSchema.parse(bodyWithDates);
+      
+      // Validate dynamic fields
+      const dynamicValidation = await validateDynamicFields(
+        validatedData.type,
+        validatedData.typeSpecificData
+      );
+      
+      if (!dynamicValidation.valid) {
+        return res.status(400).json({ 
+          error: "Dynamic field validation failed", 
+          details: dynamicValidation.errors 
+        });
+      }
+      
       const equipment = await storage.createEquipment(validatedData);
       res.status(201).json(equipment);
     } catch (error) {
@@ -99,6 +146,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Validate updates with partial schema
       const validatedUpdates = insertEquipmentSchema.partial().parse(updates);
+      
+      // If updating type or typeSpecificData, validate dynamic fields
+      if (validatedUpdates.type !== undefined || validatedUpdates.typeSpecificData !== undefined) {
+        // Get current equipment to determine type if not in updates
+        const currentEquipment = await storage.getEquipmentById(req.params.id);
+        if (!currentEquipment) {
+          return res.status(404).json({ error: "Equipment not found" });
+        }
+        
+        const equipmentType = validatedUpdates.type ?? currentEquipment.type;
+        
+        // Merge typeSpecificData: existing fields + updated fields
+        const existingData = (currentEquipment.typeSpecificData as Record<string, any>) || {};
+        const updatedData = (validatedUpdates.typeSpecificData as Record<string, any>) || {};
+        const mergedTypeSpecificData = { ...existingData, ...updatedData };
+        
+        const dynamicValidation = await validateDynamicFields(equipmentType, mergedTypeSpecificData);
+        
+        if (!dynamicValidation.valid) {
+          return res.status(400).json({ 
+            error: "Dynamic field validation failed", 
+            details: dynamicValidation.errors 
+          });
+        }
+      }
       
       const equipment = await storage.updateEquipment(req.params.id, validatedUpdates);
       if (!equipment) {
