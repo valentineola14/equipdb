@@ -1,7 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertEquipmentSchema, searchEquipmentSchema, insertEquipmentTypesSchema } from "@shared/schema";
+import { insertEquipmentSchema, searchEquipmentSchema, insertEquipmentTypesSchema, fieldConfigSchema } from "@shared/schema";
+import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Search equipment - MUST be before /:id route
@@ -198,6 +199,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting equipment type:", error);
       res.status(500).json({ error: "Failed to delete equipment type" });
+    }
+  });
+
+  // Update equipment type field configurations
+  app.patch("/api/equipment-types/:id/fields", async (req, res) => {
+    try {
+      // Validate field configurations array
+      const fieldsConfigSchema = z.array(fieldConfigSchema);
+      const validatedFields = fieldsConfigSchema.parse(req.body.fieldsConfig);
+      
+      const type = await storage.updateEquipmentTypeFields(req.params.id, validatedFields);
+      if (!type) {
+        return res.status(404).json({ error: "Equipment type not found" });
+      }
+      res.json(type);
+    } catch (error) {
+      console.error("Error updating field configurations:", error);
+      if (error instanceof Error && error.name === "ZodError") {
+        return res.status(400).json({ error: "Invalid field configuration data", details: error });
+      }
+      res.status(500).json({ error: "Failed to update field configurations" });
     }
   });
 

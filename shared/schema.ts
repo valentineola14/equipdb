@@ -29,6 +29,32 @@ export const equipment = pgTable("equipment", {
   typeSpecificData: jsonb("type_specific_data"),
 });
 
+// Field configuration schema for dynamic equipment fields
+export const fieldConfigSchema = z.object({
+  id: z.string(), // Unique identifier for the field
+  label: z.string(), // Display label for the field
+  dataKey: z.string(), // Key used to store the value in typeSpecificData
+  inputType: z.enum(["text", "number", "decimal", "date", "select", "multiselect", "boolean", "textarea"]),
+  isRequired: z.boolean().default(false),
+  options: z.array(z.string()).optional(), // For select/multiselect types
+  defaultValue: z.string().optional(),
+  order: z.number(), // Display order
+  placeholder: z.string().optional(),
+  helpText: z.string().optional(),
+});
+
+export type FieldConfig = z.infer<typeof fieldConfigSchema>;
+
+// Equipment type with typed fields config
+export const equipmentTypeWithFieldsSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().nullable(),
+  fieldsConfig: z.array(fieldConfigSchema).nullable(),
+});
+
+export type EquipmentTypeWithFields = z.infer<typeof equipmentTypeWithFieldsSchema>;
+
 export const insertEquipmentTypesSchema = createInsertSchema(equipmentTypes).omit({
   id: true,
 });
