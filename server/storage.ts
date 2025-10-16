@@ -29,6 +29,7 @@ export interface IStorage {
   createEquipmentType(type: InsertEquipmentType): Promise<EquipmentType>;
   updateEquipmentType(id: string, type: Partial<InsertEquipmentType>): Promise<EquipmentType | undefined>;
   deleteEquipmentType(id: string): Promise<boolean>;
+  updateEquipmentTypeFields(id: string, fieldsConfig: any): Promise<EquipmentType | undefined>;
 }
 
 export class PostgresStorage implements IStorage {
@@ -195,6 +196,15 @@ export class PostgresStorage implements IStorage {
       .where(eq(equipmentTypesTable.id, id))
       .returning();
     return result.length > 0;
+  }
+
+  async updateEquipmentTypeFields(id: string, fieldsConfig: any): Promise<EquipmentType | undefined> {
+    const result = await this.db
+      .update(equipmentTypesTable)
+      .set({ fieldsConfig })
+      .where(eq(equipmentTypesTable.id, id))
+      .returning();
+    return result[0];
   }
 }
 

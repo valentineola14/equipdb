@@ -43,10 +43,18 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Plus, Pencil, Trash2, LogOut } from "lucide-react";
-import type { EquipmentType } from "@shared/schema";
+import type { EquipmentType, EquipmentTypeWithFields } from "@shared/schema";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { FieldConfigEditor } from "@/components/field-config-editor";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const equipmentTypeFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -63,6 +71,7 @@ export default function Settings() {
   const [deleteTypeDialogOpen, setDeleteTypeDialogOpen] = useState(false);
   const [editingType, setEditingType] = useState<EquipmentType | null>(null);
   const [deletingType, setDeletingType] = useState<EquipmentType | null>(null);
+  const [selectedTypeForFields, setSelectedTypeForFields] = useState<string>("");
 
   const { data: equipmentTypes = [], isLoading } = useQuery<EquipmentType[]>({
     queryKey: ["/api/equipment-types"],
@@ -173,6 +182,9 @@ export default function Settings() {
             <TabsTrigger value="equipment-types" data-testid="tab-equipment-types">
               Equipment Types
             </TabsTrigger>
+            <TabsTrigger value="field-config" data-testid="tab-field-config">
+              Field Configuration
+            </TabsTrigger>
             <TabsTrigger value="status-options" data-testid="tab-status-options">
               Status Options
             </TabsTrigger>
@@ -258,6 +270,53 @@ export default function Settings() {
                     </TableBody>
                   </Table>
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="field-config" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Field Configuration</CardTitle>
+                <CardDescription>
+                  Configure custom fields for each equipment type (e.g., Primary KV for Transformer, BusID for Circuit Breaker)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Select Equipment Type</label>
+                    <Select
+                      value={selectedTypeForFields}
+                      onValueChange={setSelectedTypeForFields}
+                    >
+                      <SelectTrigger className="w-full max-w-md" data-testid="select-equipment-type">
+                        <SelectValue placeholder="Choose an equipment type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {equipmentTypes.map((type) => (
+                          <SelectItem key={type.id} value={type.id}>
+                            {type.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {selectedTypeForFields && (
+                    <FieldConfigEditor
+                      equipmentType={
+                        equipmentTypes.find(t => t.id === selectedTypeForFields) as EquipmentTypeWithFields
+                      }
+                    />
+                  )}
+
+                  {!selectedTypeForFields && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      Select an equipment type to configure its fields
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
