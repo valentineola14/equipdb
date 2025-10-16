@@ -1,11 +1,23 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { type Equipment } from "@shared/schema";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { type Equipment, type InsertEquipment } from "@shared/schema";
 import { EquipmentSearch } from "@/components/equipment-search";
 import { EquipmentFilters, type FilterOptions } from "@/components/equipment-filters";
 import { EquipmentTable } from "@/components/equipment-table";
 import { EquipmentDetailPanel } from "@/components/equipment-detail-panel";
+import { EquipmentForm } from "@/components/equipment-form";
 import { useLocation } from "wouter";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface SearchParams {
   query?: string;
@@ -17,6 +29,7 @@ interface SearchParams {
 
 export default function EquipmentList() {
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const [searchParams, setSearchParams] = useState<SearchParams>({
     searchType: "all",
   });
@@ -26,6 +39,7 @@ export default function EquipmentList() {
   });
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
   const [detailPanelOpen, setDetailPanelOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   // Build the appropriate query key and URL
   let queryKey: (string | number)[];
@@ -94,15 +108,47 @@ export default function EquipmentList() {
     setLocation(`/map?equipment=${equipment.id}`);
   };
 
+  const createMutation = useMutation({
+    mutationFn: async (data: InsertEquipment) => {
+      const res = await apiRequest("POST", "/api/equipment", data);
+      return await res.json();
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/equipment"] });
+      await queryClient.refetchQueries({ queryKey: ["/api/equipment"] });
+      setCreateDialogOpen(false);
+      toast({
+        title: "Equipment created",
+        description: "New equipment has been successfully added.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create equipment",
+        variant: "destructive",
+      });
+    },
+  });
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold" data-testid="heading-equipment-list">
-          Equipment List
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Search and manage all grid equipment
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold" data-testid="heading-equipment-list">
+            Equipment List
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Search and manage all grid equipment
+          </p>
+        </div>
+        <Button
+          onClick={() => setCreateDialogOpen(true)}
+          data-testid="button-add-equipment"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Add Equipment
+        </Button>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
@@ -140,6 +186,24 @@ export default function EquipmentList() {
         open={detailPanelOpen}
         onClose={() => setDetailPanelOpen(false)}
       />
+
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle data-testid="dialog-title-add-equipment">Add Equipment</DialogTitle>
+            <DialogDescription>
+              Enter the details for the new equipment. All fields marked as required must be filled.
+            </DialogDescription>
+          </DialogHeader>
+          {createDialogOpen && (
+            <EquipmentForm
+              key="create-equipment-form"
+              onSubmit={(data) => createMutation.mutate(data)}
+              isPending={createMutation.isPending}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
