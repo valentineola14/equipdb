@@ -267,6 +267,7 @@ export default function EquipmentList() {
                 lastMaintenance: editingEquipment.lastMaintenance ? 
                   (typeof editingEquipment.lastMaintenance === 'string' ? editingEquipment.lastMaintenance.split('T')[0] : new Date(editingEquipment.lastMaintenance).toISOString().split('T')[0]) : 
                   undefined,
+                typeSpecificData: editingEquipment.typeSpecificData || undefined,
               }}
               onSubmit={(data) => updateMutation.mutate({ id: editingEquipment.id, data })}
               isPending={updateMutation.isPending}

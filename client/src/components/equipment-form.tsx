@@ -2,6 +2,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertEquipmentSchema, type InsertEquipment } from "@shared/schema";
 import { z } from "zod";
+import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -20,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
+import { TypeSpecificFields } from "@/components/type-specific-fields";
 
 interface EquipmentFormProps {
   defaultValues?: Partial<InsertEquipment>;
@@ -32,6 +34,7 @@ const equipmentTypes = [
   "Substation",
   "Generator",
   "Circuit Breaker",
+  "Switch",
   "Capacitor Bank",
   "Voltage Regulator",
 ];
@@ -68,8 +71,20 @@ export function EquipmentForm({ defaultValues, onSubmit, isPending }: EquipmentF
       voltage: "",
       installationDate: undefined,
       lastMaintenance: undefined,
+      typeSpecificData: undefined,
     },
   });
+
+  const selectedType = form.watch("type");
+  const previousType = useRef<string | undefined>(selectedType);
+
+  // Clear type-specific data only when equipment type actually changes (not on mount)
+  useEffect(() => {
+    if (previousType.current !== undefined && previousType.current !== selectedType) {
+      form.setValue("typeSpecificData", undefined);
+    }
+    previousType.current = selectedType;
+  }, [selectedType, form]);
 
   return (
     <Form {...form}>
@@ -347,6 +362,12 @@ export function EquipmentForm({ defaultValues, onSubmit, isPending }: EquipmentF
             )}
           />
         </div>
+
+        {selectedType && (
+          <div className="border-t border-border pt-6">
+            <TypeSpecificFields type={selectedType} control={form.control} />
+          </div>
+        )}
 
         <div className="flex justify-end gap-3">
           <Button
