@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
-import { TypeSpecificFields } from "@/components/type-specific-fields";
+import { DynamicTypeFields } from "@/components/dynamic-type-fields";
 
 interface EquipmentFormProps {
   defaultValues?: Partial<InsertEquipment>;
@@ -361,7 +361,7 @@ export function EquipmentForm({ defaultValues, onSubmit, isPending }: EquipmentF
 
         {selectedType && (
           <div className="border-t border-border pt-6">
-            <TypeSpecificFields type={selectedType} control={form.control} />
+            <DynamicTypeFields type={selectedType} control={form.control} />
           </div>
         )}
 
