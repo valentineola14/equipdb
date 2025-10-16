@@ -1,23 +1,11 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { type Equipment, type InsertEquipment } from "@shared/schema";
+import { useQuery } from "@tanstack/react-query";
+import { type Equipment } from "@shared/schema";
 import { EquipmentSearch } from "@/components/equipment-search";
 import { EquipmentFilters, type FilterOptions } from "@/components/equipment-filters";
 import { EquipmentTable } from "@/components/equipment-table";
 import { EquipmentDetailPanel } from "@/components/equipment-detail-panel";
-import { EquipmentForm } from "@/components/equipment-form";
 import { useLocation } from "wouter";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
 
 interface SearchParams {
   query?: string;
@@ -29,7 +17,6 @@ interface SearchParams {
 
 export default function EquipmentList() {
   const [, setLocation] = useLocation();
-  const { toast } = useToast();
   const [searchParams, setSearchParams] = useState<SearchParams>({
     searchType: "all",
   });
@@ -39,9 +26,6 @@ export default function EquipmentList() {
   });
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
   const [detailPanelOpen, setDetailPanelOpen] = useState(false);
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null);
 
   // Build the appropriate query key and URL
   let queryKey: (string | number)[];
@@ -110,76 +94,15 @@ export default function EquipmentList() {
     setLocation(`/map?equipment=${equipment.id}`);
   };
 
-  const createMutation = useMutation({
-    mutationFn: async (data: InsertEquipment) => {
-      const res = await apiRequest("POST", "/api/equipment", data);
-      return await res.json();
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["/api/equipment"] });
-      await queryClient.refetchQueries({ queryKey: ["/api/equipment"] });
-      setCreateDialogOpen(false);
-      toast({
-        title: "Equipment created",
-        description: "New equipment has been successfully added.",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create equipment",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<InsertEquipment> }) => {
-      const res = await apiRequest("PATCH", `/api/equipment/${id}`, data);
-      return await res.json();
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["/api/equipment"] });
-      await queryClient.refetchQueries({ queryKey: ["/api/equipment"] });
-      setEditDialogOpen(false);
-      setEditingEquipment(null);
-      toast({
-        title: "Equipment updated",
-        description: "Equipment has been successfully updated.",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update equipment",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleEdit = (equipment: Equipment) => {
-    setEditingEquipment(equipment);
-    setEditDialogOpen(true);
-  };
-
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold" data-testid="heading-equipment-list">
-            Equipment List
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Search and manage all grid equipment
-          </p>
-        </div>
-        <Button
-          onClick={() => setCreateDialogOpen(true)}
-          data-testid="button-add-equipment"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Add Equipment
-        </Button>
+      <div>
+        <h1 className="text-2xl font-semibold" data-testid="heading-equipment-list">
+          Equipment List
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Search and view all grid equipment
+        </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
@@ -208,7 +131,6 @@ export default function EquipmentList() {
             isLoading={isLoading}
             onViewDetails={handleViewDetails}
             onViewOnMap={handleViewOnMap}
-            onEdit={handleEdit}
           />
         </div>
       </div>
@@ -218,63 +140,6 @@ export default function EquipmentList() {
         open={detailPanelOpen}
         onClose={() => setDetailPanelOpen(false)}
       />
-
-      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle data-testid="dialog-title-add-equipment">Add Equipment</DialogTitle>
-            <DialogDescription>
-              Enter the details for the new equipment. All fields marked as required must be filled.
-            </DialogDescription>
-          </DialogHeader>
-          {createDialogOpen && (
-            <EquipmentForm
-              key="create-equipment-form"
-              onSubmit={(data) => createMutation.mutate(data)}
-              isPending={createMutation.isPending}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle data-testid="dialog-title-edit-equipment">Edit Equipment</DialogTitle>
-            <DialogDescription>
-              Update the equipment details below.
-            </DialogDescription>
-          </DialogHeader>
-          {editDialogOpen && editingEquipment && (
-            <EquipmentForm
-              key={`edit-equipment-form-${editingEquipment.id}`}
-              defaultValues={{
-                equipmentId: editingEquipment.equipmentId,
-                name: editingEquipment.name,
-                type: editingEquipment.type,
-                status: editingEquipment.status,
-                location: editingEquipment.location,
-                address: editingEquipment.address,
-                latitude: editingEquipment.latitude,
-                longitude: editingEquipment.longitude,
-                manufacturer: editingEquipment.manufacturer || "",
-                model: editingEquipment.model || "",
-                capacity: editingEquipment.capacity || "",
-                voltage: editingEquipment.voltage || "",
-                installationDate: editingEquipment.installationDate ? 
-                  (typeof editingEquipment.installationDate === 'string' ? editingEquipment.installationDate.split('T')[0] : new Date(editingEquipment.installationDate).toISOString().split('T')[0]) : 
-                  undefined,
-                lastMaintenance: editingEquipment.lastMaintenance ? 
-                  (typeof editingEquipment.lastMaintenance === 'string' ? editingEquipment.lastMaintenance.split('T')[0] : new Date(editingEquipment.lastMaintenance).toISOString().split('T')[0]) : 
-                  undefined,
-                typeSpecificData: editingEquipment.typeSpecificData || undefined,
-              }}
-              onSubmit={(data) => updateMutation.mutate({ id: editingEquipment.id, data })}
-              isPending={updateMutation.isPending}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
