@@ -1,4 +1,11 @@
-import { type Equipment, type InsertEquipment, equipment as equipmentTable } from "@shared/schema";
+import { 
+  type Equipment, 
+  type InsertEquipment, 
+  type EquipmentType,
+  type InsertEquipmentType,
+  equipment as equipmentTable,
+  equipmentTypes as equipmentTypesTable
+} from "@shared/schema";
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 import { eq, ilike, or, sql } from "drizzle-orm";
@@ -15,6 +22,13 @@ export interface IStorage {
   // Search operations
   searchEquipment(query: string, searchType?: string): Promise<Equipment[]>;
   searchByCoordinates(latitude: number, longitude: number, radius?: number): Promise<Equipment[]>;
+  
+  // Equipment Types operations
+  getAllEquipmentTypes(): Promise<EquipmentType[]>;
+  getEquipmentTypeById(id: string): Promise<EquipmentType | undefined>;
+  createEquipmentType(type: InsertEquipmentType): Promise<EquipmentType>;
+  updateEquipmentType(id: string, type: Partial<InsertEquipmentType>): Promise<EquipmentType | undefined>;
+  deleteEquipmentType(id: string): Promise<boolean>;
 }
 
 export class PostgresStorage implements IStorage {
@@ -140,6 +154,47 @@ export class PostgresStorage implements IStorage {
       );
     
     return result;
+  }
+
+  async getAllEquipmentTypes(): Promise<EquipmentType[]> {
+    const result = await this.db.select().from(equipmentTypesTable);
+    return result;
+  }
+
+  async getEquipmentTypeById(id: string): Promise<EquipmentType | undefined> {
+    const result = await this.db
+      .select()
+      .from(equipmentTypesTable)
+      .where(eq(equipmentTypesTable.id, id));
+    return result[0];
+  }
+
+  async createEquipmentType(insertType: InsertEquipmentType): Promise<EquipmentType> {
+    const result = await this.db
+      .insert(equipmentTypesTable)
+      .values(insertType)
+      .returning();
+    return result[0];
+  }
+
+  async updateEquipmentType(
+    id: string,
+    updates: Partial<InsertEquipmentType>
+  ): Promise<EquipmentType | undefined> {
+    const result = await this.db
+      .update(equipmentTypesTable)
+      .set(updates)
+      .where(eq(equipmentTypesTable.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteEquipmentType(id: string): Promise<boolean> {
+    const result = await this.db
+      .delete(equipmentTypesTable)
+      .where(eq(equipmentTypesTable.id, id))
+      .returning();
+    return result.length > 0;
   }
 }
 

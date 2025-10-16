@@ -3,6 +3,13 @@ import { pgTable, text, varchar, decimal, timestamp, jsonb } from "drizzle-orm/p
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+export const equipmentTypes = pgTable("equipment_types", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  fieldsConfig: jsonb("fields_config"),
+});
+
 export const equipment = pgTable("equipment", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   equipmentId: text("equipment_id").notNull().unique(),
@@ -21,6 +28,13 @@ export const equipment = pgTable("equipment", {
   lastMaintenance: timestamp("last_maintenance"),
   typeSpecificData: jsonb("type_specific_data"),
 });
+
+export const insertEquipmentTypesSchema = createInsertSchema(equipmentTypes).omit({
+  id: true,
+});
+
+export type InsertEquipmentType = z.infer<typeof insertEquipmentTypesSchema>;
+export type EquipmentType = typeof equipmentTypes.$inferSelect;
 
 export const insertEquipmentSchema = createInsertSchema(equipment).omit({
   id: true,
