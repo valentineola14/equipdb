@@ -1,8 +1,9 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertEquipmentSchema, type InsertEquipment } from "@shared/schema";
+import { insertEquipmentSchema, type InsertEquipment, type EquipmentType } from "@shared/schema";
 import { z } from "zod";
 import { useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -29,16 +30,6 @@ interface EquipmentFormProps {
   isPending?: boolean;
 }
 
-const equipmentTypes = [
-  "Transformer",
-  "Substation",
-  "Generator",
-  "Circuit Breaker",
-  "Switch",
-  "Capacitor Bank",
-  "Voltage Regulator",
-];
-
 const statusOptions = [
   { value: "operational", label: "Operational" },
   { value: "maintenance", label: "Maintenance" },
@@ -54,6 +45,11 @@ const formSchema = insertEquipmentSchema.extend({
 });
 
 export function EquipmentForm({ defaultValues, onSubmit, isPending }: EquipmentFormProps) {
+  const { data: equipmentTypesData = [] } = useQuery<EquipmentType[]>({
+    queryKey: ["/api/equipment-types"],
+  });
+
+  const equipmentTypes = equipmentTypesData.map(t => t.name);
   const form = useForm<InsertEquipment>({
     resolver: zodResolver(formSchema),
     defaultValues: defaultValues || {

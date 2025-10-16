@@ -30,6 +30,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -278,10 +279,10 @@ export default function Settings() {
                 capacity: editingEquipment.capacity || "",
                 voltage: editingEquipment.voltage || "",
                 installationDate: editingEquipment.installationDate ? 
-                  (typeof editingEquipment.installationDate === 'string' ? editingEquipment.installationDate.split('T')[0] : new Date(editingEquipment.installationDate).toISOString().split('T')[0]) : 
+                  (editingEquipment.installationDate instanceof Date ? editingEquipment.installationDate.toISOString().split('T')[0] : String(editingEquipment.installationDate).split('T')[0]) : 
                   undefined,
                 lastMaintenance: editingEquipment.lastMaintenance ? 
-                  (typeof editingEquipment.lastMaintenance === 'string' ? editingEquipment.lastMaintenance.split('T')[0] : new Date(editingEquipment.lastMaintenance).toISOString().split('T')[0]) : 
+                  (editingEquipment.lastMaintenance instanceof Date ? editingEquipment.lastMaintenance.toISOString().split('T')[0] : String(editingEquipment.lastMaintenance).split('T')[0]) : 
                   undefined,
                 typeSpecificData: editingEquipment.typeSpecificData || undefined,
               }}
