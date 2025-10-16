@@ -170,6 +170,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             details: dynamicValidation.errors 
           });
         }
+        
+        // Update validatedUpdates with merged typeSpecificData for persistence
+        if (validatedUpdates.typeSpecificData !== undefined) {
+          validatedUpdates.typeSpecificData = mergedTypeSpecificData;
+        }
       }
       
       const equipment = await storage.updateEquipment(req.params.id, validatedUpdates);
