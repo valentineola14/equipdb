@@ -23,6 +23,10 @@ export default function EquipmentList() {
   const [filters, setFilters] = useState<FilterOptions>({
     types: [],
     status: "all",
+    installationDateFrom: undefined,
+    installationDateTo: undefined,
+    lastMaintenanceFrom: undefined,
+    lastMaintenanceTo: undefined,
   });
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
   const [detailPanelOpen, setDetailPanelOpen] = useState(false);
@@ -69,17 +73,69 @@ export default function EquipmentList() {
     queryFn,
   });
 
-  // Apply client-side filters for type and status
+  // Apply client-side filters for type, status, and dates
   const filteredEquipment = equipment.filter((item) => {
+    // Type filter
     if (filters.types.length > 0 && !filters.types.includes(item.type)) {
       return false;
     }
 
+    // Status filter
     if (
       filters.status !== "all" &&
       item.status.toLowerCase() !== filters.status.toLowerCase()
     ) {
       return false;
+    }
+
+    // Installation date filter
+    if (filters.installationDateFrom) {
+      if (!item.installationDate) {
+        // If filter is set but item has no date, filter it out
+        return false;
+      }
+      const installDate = new Date(item.installationDate);
+      const fromDate = new Date(filters.installationDateFrom);
+      if (installDate < fromDate) {
+        return false;
+      }
+    }
+    if (filters.installationDateTo) {
+      if (!item.installationDate) {
+        // If filter is set but item has no date, filter it out
+        return false;
+      }
+      const installDate = new Date(item.installationDate);
+      const toDate = new Date(filters.installationDateTo);
+      toDate.setHours(23, 59, 59, 999); // Include the entire "to" date
+      if (installDate > toDate) {
+        return false;
+      }
+    }
+
+    // Last maintenance filter
+    if (filters.lastMaintenanceFrom) {
+      if (!item.lastMaintenance) {
+        // If filter is set but item has no date, filter it out
+        return false;
+      }
+      const maintenanceDate = new Date(item.lastMaintenance);
+      const fromDate = new Date(filters.lastMaintenanceFrom);
+      if (maintenanceDate < fromDate) {
+        return false;
+      }
+    }
+    if (filters.lastMaintenanceTo) {
+      if (!item.lastMaintenance) {
+        // If filter is set but item has no date, filter it out
+        return false;
+      }
+      const maintenanceDate = new Date(item.lastMaintenance);
+      const toDate = new Date(filters.lastMaintenanceTo);
+      toDate.setHours(23, 59, 59, 999); // Include the entire "to" date
+      if (maintenanceDate > toDate) {
+        return false;
+      }
     }
 
     return true;
