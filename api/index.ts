@@ -1,6 +1,6 @@
 import express, { type Request, Response } from "express";
 import { storage } from "../server/storage";
-import { insertEquipmentSchema, insertEquipmentTypesSchema, fieldConfigSchema, type FieldConfig } from "../shared/schema";
+import { insertEquipmentSchema, insertEquipmentTypesSchema, fieldConfigSchema, searchEquipmentSchema, type FieldConfig } from "../shared/schema";
 import { z } from "zod";
 
 const app = express();
@@ -58,28 +58,37 @@ async function validateDynamicFields(equipmentType: string, typeSpecificData: an
 // Search equipment - MUST be before /:id route
 app.get("/api/equipment/search", async (req, res) => {
   try {
-    const { query, searchType, latitude, longitude, radius } = req.query;
+    // Validate search parameters
+    const searchParams = {
+      query: req.query.query as string | undefined,
+      searchType: req.query.searchType as string | undefined,
+      latitude: req.query.latitude ? parseFloat(req.query.latitude as string) : undefined,
+      longitude: req.query.longitude ? parseFloat(req.query.longitude as string) : undefined,
+      radius: req.query.radius ? parseFloat(req.query.radius as string) : undefined,
+    };
 
-    if (latitude && longitude) {
-      const lat = parseFloat(latitude as string);
-      const lng = parseFloat(longitude as string);
-      const rad = radius ? parseFloat(radius as string) : 10;
+    // Validate with schema
+    const validatedParams = searchEquipmentSchema.parse(searchParams);
 
-      if (isNaN(lat) || isNaN(lng)) {
-        return res.status(400).json({ error: "Invalid coordinates" });
-      }
+    if (validatedParams.latitude !== undefined && validatedParams.longitude !== undefined) {
+      const lat = validatedParams.latitude;
+      const lng = validatedParams.longitude;
+      const rad = validatedParams.radius ?? 10;
 
       const equipment = await storage.searchByCoordinates(lat, lng, rad);
       return res.json(equipment);
     }
 
     const equipment = await storage.searchEquipment(
-      (query as string) || "",
-      (searchType as string) || "all"
+      validatedParams.query || "",
+      (validatedParams.searchType as string) || "all"
     );
     res.json(equipment);
   } catch (error) {
     console.error("Error searching equipment:", error);
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: "Invalid search parameters", details: error });
+    }
     res.status(500).json({ error: "Failed to search equipment" });
   }
 });
