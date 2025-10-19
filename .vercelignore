@@ -1,0 +1,12 @@
+node_modules
+.git
+.env
+.env.local
+server
+dist
+.replit
+replit.nix
+attached_assets
+.config
+tmp
+*.log
