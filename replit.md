@@ -109,3 +109,44 @@ Preferred communication style: Simple, everyday language.
 - Hardcoded credentials for internal use: username "bahamas", password "equipment@2025"
 - Auth context provider manages authentication state
 - Protected routes redirect to login when not authenticated
+
+## Deployment Options
+
+### Vercel Deployment (Serverless)
+
+The application has been restructured for Vercel serverless deployment:
+
+**Architecture Changes:**
+- Serverless Express API in `/api/index.ts` - All backend routes converted to serverless functions
+- Traditional server in `/server/index.ts` - Used for local development
+- Database: Neon HTTP driver (already serverless-compatible)
+- Frontend: Static build via Vite
+
+**Key Files:**
+- `vercel.json` - Vercel routing configuration (API routes + SPA fallback)
+- `/api/index.ts` - Serverless Express handler with all API endpoints
+- `.vercelignore` - Files excluded from deployment
+- `README-VERCEL.md` - Complete deployment guide
+
+**Validation & Security:**
+- Search endpoint validates query parameters using `searchEquipmentSchema`
+- CORS headers configured for cross-origin requests
+- All dynamic field validation logic preserved
+- Date handling for equipment creation/updates maintained
+- Partial update merging for typeSpecificData intact
+
+**Environment Variables Required:**
+- `DATABASE_URL` - Neon PostgreSQL connection string
+
+**Build Command:** `npm run vercel-build` (must be added to package.json)
+**Output Directory:** `dist`
+
+### Replit Publishing (Traditional Server)
+
+The application can also be deployed directly on Replit:
+- Uses `/server/index.ts` with traditional Express server
+- No restructuring required
+- Automatic HTTPS and custom domains
+- Integrated database management
+
+See `README-VERCEL.md` for detailed Vercel deployment instructions.
