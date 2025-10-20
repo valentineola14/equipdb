@@ -1,6 +1,6 @@
 import express, { type Request, Response } from "express";
-import { storage } from "../server/storage";
-import { insertEquipmentSchema, insertEquipmentTypesSchema, fieldConfigSchema, searchEquipmentSchema, type FieldConfig } from "../shared/schema";
+import { storage } from "./storage";
+import { insertEquipmentSchema, insertEquipmentTypesSchema, fieldConfigSchema, searchEquipmentSchema, type FieldConfig, type EquipmentType } from "../shared/schema";
 import { z } from "zod";
 
 const app = express();
@@ -28,7 +28,7 @@ async function validateDynamicFields(equipmentType: string, typeSpecificData: an
   
   try {
     const types = await storage.getAllEquipmentTypes();
-    const type = types.find((t) => t.name === equipmentType);
+    const type = types.find((t: EquipmentType) => t.name === equipmentType);
     
     if (!type) {
       errors.push(`Equipment type "${equipmentType}" not found`);
