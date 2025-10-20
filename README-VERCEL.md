@@ -18,7 +18,7 @@ This app has been restructured for Vercel's serverless architecture:
 - **Frontend**: Vite-built React app (served as static files)
 - **Backend**: Express API converted to serverless functions in `/api` directory
 - **Database**: Neon HTTP driver (serverless-compatible, already configured)
-
+ 
 ---
 
 ## 📝 Step 1: Update package.json
