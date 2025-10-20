@@ -11,6 +11,11 @@
     "db:push": "drizzle-kit push",
     "vercel-build": "vite build"
   },
+{
+  "scripts": {
+    "build": "cd client && npm install && npm run build"
+  }
+}
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",
