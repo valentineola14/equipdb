@@ -9,3 +9,11 @@ tmp
 server/index.ts
 server/vite.ts
 server/routes.ts
+server/storage.ts
+design_guidelines.md
+README-VERCEL.md
+replit.md
+vite.config.ts
+tsconfig.json
+drizzle.config.ts
+attached_assets
