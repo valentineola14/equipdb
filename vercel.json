@@ -1,6 +1,4 @@
 {
-  "buildCommand": "vite build --config vite.config.vercel.ts",
-  "outputDirectory": "dist/public",
   "rewrites": [
     {
       "source": "/api/(.*)",
